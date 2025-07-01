@@ -1,5 +1,6 @@
 import { config } from '../config';
 import logger from './logger';
+import sequelize from '../config/database';
 
 export interface DeploymentStatus {
   isDeployed: boolean;
@@ -14,12 +15,6 @@ export interface DeploymentStatus {
     database: boolean;
     server: boolean;
   };
-  buildInfo?: {
-    version: string;
-    buildTime: string;
-    nodeVersion: string;
-    environment: string;
-  };
 }
 
 export class DeploymentStatusChecker {
@@ -28,29 +23,32 @@ export class DeploymentStatusChecker {
    */
   async checkDeploymentStatus(): Promise<DeploymentStatus> {
     try {
-      const healthCheck = await this.checkHealthStatus();
-      const buildInfo = this.getBuildInfo();
+      // 检查健康状态
+      const healthStatus = await this.checkHealthStatus();
+      
+      // 获取部署信息
+      const deploymentInfo = this.getDeploymentInfo();
       
       return {
         isDeployed: true,
+        deploymentUrl: process.env.DEPLOYMENT_URL || 'https://api.interactive-media.example.com',
         status: 'deployed',
-        deploymentUrl: process.env.DEPLOYMENT_URL || `http://localhost:${config.PORT}`,
         lastDeployment: {
           timestamp: new Date().toISOString(),
-          version: process.env.npm_package_version || '1.0.0',
+          version: process.env.APP_VERSION || '1.0.0',
           environment: config.NODE_ENV
         },
-        healthCheck,
-        buildInfo
+        healthCheck: healthStatus
       };
     } catch (error) {
       logger.error('Failed to check deployment status:', error);
+      
       return {
         isDeployed: false,
         status: 'failed',
         healthCheck: {
           database: false,
-          server: false
+          server: true
         }
       };
     }
@@ -60,49 +58,33 @@ export class DeploymentStatusChecker {
    * 检查服务健康状态
    */
   async checkHealthStatus(): Promise<{ database: boolean; server: boolean }> {
-    const health = {
+    const healthStatus = {
       database: false,
-      server: true // 如果能执行到这里，服务器就是运行的
+      server: true // 服务器正在运行，所以为true
     };
-
+    
     try {
       // 检查数据库连接
-      const sequelize = require('../config/database').default;
       await sequelize.authenticate();
-      health.database = true;
+      healthStatus.database = true;
     } catch (error) {
-      logger.warn('Database health check failed:', error.message);
+      logger.error('Database health check failed:', error);
+      healthStatus.database = false;
     }
-
-    return health;
+    
+    return healthStatus;
   }
 
   /**
-   * 获取构建信息
+   * 获取部署信息
    */
-  getBuildInfo() {
+  getDeploymentInfo(): any {
     return {
-      version: process.env.npm_package_version || '1.0.0',
-      buildTime: new Date().toISOString(),
-      nodeVersion: process.version,
-      environment: config.NODE_ENV
-    };
-  }
-
-  /**
-   * 获取系统信息
-   */
-  getSystemInfo() {
-    const os = require('os');
-    return {
-      platform: os.platform(),
-      arch: os.arch(),
-      cpus: os.cpus().length,
-      memory: {
-        total: Math.round(os.totalmem() / 1024 / 1024) + 'MB',
-        free: Math.round(os.freemem() / 1024 / 1024) + 'MB'
-      },
-      uptime: Math.round(os.uptime()) + 's'
+      version: process.env.APP_VERSION || '1.0.0',
+      environment: config.NODE_ENV,
+      deployedAt: process.env.DEPLOYED_AT || new Date().toISOString(),
+      deployedBy: process.env.DEPLOYED_BY || 'system',
+      commitHash: process.env.COMMIT_HASH || 'unknown'
     };
   }
 }
