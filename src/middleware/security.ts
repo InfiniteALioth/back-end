@@ -119,13 +119,24 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction): 
 
 // 健康检查中间件
 export const healthCheck = (req: Request, res: Response): void => {
-  res.status(200).json({
-    success: true,
-    message: '服务运行正常',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-  });
+  try {
+    res.status(200).json({
+      success: true,
+      message: '服务运行正常',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      version: process.version,
+      environment: process.env.NODE_ENV,
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(500).json({
+      success: false,
+      message: '服务器内部错误',
+      timestamp: new Date().toISOString(),
+    });
+  }
 };
 
 // IP 白名单中间件（可选）

@@ -64,17 +64,7 @@ class Server {
     this.app.use(requestLogger);
 
     // 健康检查
-    this.app.get('/health', (req, res) => {
-      res.status(200).json({
-        success: true,
-        message: '服务运行正常',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        memory: process.memoryUsage(),
-        version: process.version,
-        environment: process.env.NODE_ENV,
-      });
-    });
+    this.app.get('/health', healthCheck);
   }
 
   /**
@@ -94,32 +84,50 @@ class Server {
 
     // API 根路径
     this.app.get(`${apiPrefix}`, (req, res) => {
-      res.json({
-        success: true,
-        message: 'Interactive Media Platform API',
-        version: config.API_VERSION,
-        timestamp: new Date().toISOString(),
-        endpoints: {
-          auth: `${apiPrefix}/auth`,
-          pages: `${apiPrefix}/pages`,
-          media: `${apiPrefix}/media`,
-          chat: `${apiPrefix}/chat`,
-          admin: `${apiPrefix}/admin`,
-          upload: `${apiPrefix}/upload`,
-          users: `${apiPrefix}/users`,
-        },
-      });
+      try {
+        res.json({
+          success: true,
+          message: 'Interactive Media Platform API',
+          version: config.API_VERSION,
+          timestamp: new Date().toISOString(),
+          endpoints: {
+            auth: `${apiPrefix}/auth`,
+            pages: `${apiPrefix}/pages`,
+            media: `${apiPrefix}/media`,
+            chat: `${apiPrefix}/chat`,
+            admin: `${apiPrefix}/admin`,
+            upload: `${apiPrefix}/upload`,
+            users: `${apiPrefix}/users`,
+          },
+        });
+      } catch (error) {
+        logger.error('API root endpoint error:', error);
+        res.status(500).json({
+          success: false,
+          message: '服务器内部错误',
+          timestamp: new Date().toISOString(),
+        });
+      }
     });
 
     // 根路径
     this.app.get('/', (req, res) => {
-      res.json({
-        success: true,
-        message: 'Interactive Media Platform Backend',
-        version: config.API_VERSION,
-        timestamp: new Date().toISOString(),
-        api: `${apiPrefix}`,
-      });
+      try {
+        res.json({
+          success: true,
+          message: 'Interactive Media Platform Backend',
+          version: config.API_VERSION,
+          timestamp: new Date().toISOString(),
+          api: `${apiPrefix}`,
+        });
+      } catch (error) {
+        logger.error('Root endpoint error:', error);
+        res.status(500).json({
+          success: false,
+          message: '服务器内部错误',
+          timestamp: new Date().toISOString(),
+        });
+      }
     });
   }
 

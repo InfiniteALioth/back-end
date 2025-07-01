@@ -7,6 +7,7 @@ import path from 'path';
 
 export class OSSUtils {
   private static client: OSS;
+  private static initialized = false;
 
   /**
    * 初始化 OSS 客户端
@@ -14,18 +15,26 @@ export class OSSUtils {
   static initialize(): void {
     if (!config.OSS_ACCESS_KEY_ID || !config.OSS_ACCESS_KEY_SECRET || !config.OSS_BUCKET) {
       logger.warn('OSS 配置不完整，文件上传功能将不可用');
+      this.initialized = false;
       return;
     }
 
-    this.client = new OSS({
-      region: config.OSS_REGION,
-      accessKeyId: config.OSS_ACCESS_KEY_ID,
-      accessKeySecret: config.OSS_ACCESS_KEY_SECRET,
-      bucket: config.OSS_BUCKET,
-      endpoint: config.OSS_ENDPOINT,
-    });
-
-    logger.info('OSS 客户端初始化成功');
+    try {
+      this.client = new OSS({
+        region: config.OSS_REGION,
+        accessKeyId: config.OSS_ACCESS_KEY_ID,
+        accessKeySecret: config.OSS_ACCESS_KEY_SECRET,
+        bucket: config.OSS_BUCKET,
+        endpoint: config.OSS_ENDPOINT,
+      });
+      
+      this.initialized = true;
+      logger.info('OSS 客户端初始化成功');
+    } catch (error) {
+      this.initialized = false;
+      logger.error('OSS 客户端初始化失败:', error);
+      throw error;
+    }
   }
 
   /**
@@ -36,7 +45,7 @@ export class OSSUtils {
     originalName: string,
     folder: string = 'uploads'
   ): Promise<IOSSUploadResult> {
-    if (!this.client) {
+    if (!this.initialized || !this.client) {
       throw new Error('OSS 客户端未初始化');
     }
 
@@ -67,6 +76,10 @@ export class OSSUtils {
     files: Array<{ buffer: Buffer; originalName: string }>,
     folder: string = 'uploads'
   ): Promise<IOSSUploadResult[]> {
+    if (!this.initialized || !this.client) {
+      throw new Error('OSS 客户端未初始化');
+    }
+    
     const uploadPromises = files.map(file =>
       this.uploadFile(file.buffer, file.originalName, folder)
     );
@@ -78,7 +91,7 @@ export class OSSUtils {
    * 删除 OSS 文件
    */
   static async deleteFile(objectName: string): Promise<void> {
-    if (!this.client) {
+    if (!this.initialized || !this.client) {
       throw new Error('OSS 客户端未初始化');
     }
 
@@ -95,7 +108,7 @@ export class OSSUtils {
    * 删除多个 OSS 文件
    */
   static async deleteMultipleFiles(objectNames: string[]): Promise<void> {
-    if (!this.client) {
+    if (!this.initialized || !this.client) {
       throw new Error('OSS 客户端未初始化');
     }
 
@@ -112,7 +125,7 @@ export class OSSUtils {
    * 获取文件签名 URL
    */
   static async getSignedUrl(objectName: string, expires: number = 3600): Promise<string> {
-    if (!this.client) {
+    if (!this.initialized || !this.client) {
       throw new Error('OSS 客户端未初始化');
     }
 
@@ -128,8 +141,8 @@ export class OSSUtils {
    * 检查文件是否存在
    */
   static async fileExists(objectName: string): Promise<boolean> {
-    if (!this.client) {
-      throw new Error('OSS 客户端未初始化');
+    if (!this.initialized || !this.client) {
+      return false;
     }
 
     try {
@@ -144,7 +157,7 @@ export class OSSUtils {
    * 获取文件信息
    */
   static async getFileInfo(objectName: string): Promise<any> {
-    if (!this.client) {
+    if (!this.initialized || !this.client) {
       throw new Error('OSS 客户端未初始化');
     }
 
@@ -154,6 +167,13 @@ export class OSSUtils {
       logger.error('获取文件信息失败:', error);
       throw new Error('获取文件信息失败');
     }
+  }
+  
+  /**
+   * 检查是否已初始化
+   */
+  static isInitialized(): boolean {
+    return this.initialized;
   }
 }
 
