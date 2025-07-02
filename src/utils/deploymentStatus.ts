@@ -17,7 +17,7 @@ export interface DeploymentStatus {
   };
 }
 
-export class DeploymentStatusChecker {
+class DeploymentStatusChecker {
   /**
    * 检查当前部署状态
    */
@@ -84,7 +84,10 @@ export class DeploymentStatusChecker {
       environment: config.NODE_ENV,
       deployedAt: process.env.DEPLOYED_AT || new Date().toISOString(),
       deployedBy: process.env.DEPLOYED_BY || 'system',
-      commitHash: process.env.COMMIT_HASH || 'unknown'
+      commitHash: process.env.COMMIT_HASH || 'unknown',
+      nodeVersion: process.version,
+      platform: process.platform,
+      arch: process.arch
     };
   }
 }
