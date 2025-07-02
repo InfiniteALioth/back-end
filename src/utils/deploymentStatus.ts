@@ -31,11 +31,11 @@ export class DeploymentStatusChecker {
       
       return {
         isDeployed: true,
-        deploymentUrl: process.env.DEPLOYMENT_URL || 'https://api.interactive-media.example.com',
+        deploymentUrl: process.env.DEPLOYMENT_URL || `http://localhost:${config.PORT}`,
         status: 'deployed',
         lastDeployment: {
           timestamp: new Date().toISOString(),
-          version: process.env.APP_VERSION || '1.0.0',
+          version: process.env.npm_package_version || '1.0.0',
           environment: config.NODE_ENV
         },
         healthCheck: healthStatus
@@ -80,7 +80,7 @@ export class DeploymentStatusChecker {
    */
   getDeploymentInfo(): any {
     return {
-      version: process.env.APP_VERSION || '1.0.0',
+      version: process.env.npm_package_version || '1.0.0',
       environment: config.NODE_ENV,
       deployedAt: process.env.DEPLOYED_AT || new Date().toISOString(),
       deployedBy: process.env.DEPLOYED_BY || 'system',
